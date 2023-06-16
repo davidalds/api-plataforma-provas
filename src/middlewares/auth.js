@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 const auth = (req, res, next) => {
-  const token = req.headers.authorization;
+  let token = req.headers.authorization;
 
   if (!token) {
     return res.status(400).json({
@@ -10,6 +10,22 @@ const auth = (req, res, next) => {
       },
     });
   }
+
+  const token_arr = token.split(' ');
+
+  if (token_arr.includes('Bearer')) {
+    if (token_arr.length === 2) {
+      token = token_arr[1];
+    } else {
+      return res.status(400).json({
+        error: {
+          msg: 'Token mal formatado',
+        },
+      });
+    }
+  }
+
+  req.params.user_token = token;
 
   jwt.verify(token, process.env.JWTKEY, (err) => {
     if (err) {

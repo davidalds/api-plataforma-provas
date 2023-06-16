@@ -14,6 +14,7 @@ class Question {
       const questionAndOptions = await knex
         .select(
           'question.peso',
+          'option.option_letter',
           'option.option_id',
           'option.question_id',
           'option.iscorrect'
@@ -24,6 +25,21 @@ class Question {
         .andWhere('option.iscorrect', true);
 
       return questionAndOptions;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async findQuestionsWithPeso(prova_id) {
+    try {
+      const questions = await knex
+        .select()
+        .sum('peso as total_score')
+        .count('* as total_question')
+        .from('question')
+        .where({ prova_id });
+
+      return questions[0];
     } catch (error) {
       console.log(error);
     }
