@@ -5,17 +5,9 @@
   "license": "MIT",
   "scripts": {
     "dev": "nodemon index.js",
-    "prettier-lint": "prettier --watch .",
+    "prettier-lint": "prettier --check .",
     "prettier-format": "prettier --format .",
     "postinstall": "husky install"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*": "prettier --write"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -31,7 +23,7 @@
   },
   "devDependencies": {
     "husky": "^8.0.3",
-    "lint-staged": "^13.2.2",
-    "nodemon": "^2.0.22"
+    "nodemon": "^2.0.22",
+    "pretty-quick": "^3.1.3"
   }
 }
