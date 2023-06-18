@@ -1,6 +1,9 @@
 const knex = require('../db/connection');
 const { saveScore, findScore, findProvaByUuid } = require('../models/Prova');
-const { findQuestionWithOptions } = require('../models/Question');
+const {
+  findQuestionWithOptions,
+  findQuestions,
+} = require('../models/Question');
 
 class QuestionControllers {
   async questionAnswersVerify(req, res) {
@@ -58,48 +61,7 @@ class QuestionControllers {
         });
       }
 
-      const questions = await knex
-        .select([
-          'question.*',
-          'option.title as option_title',
-          'option.option_id',
-          'option.option_letter',
-        ])
-        .from('question')
-        .where('prova_id', prova.prova_id)
-        .join('option', 'option.question_id', 'question.question_id')
-        .then((query) => {
-          const arr = [];
-          query.forEach((question) => {
-            if (
-              arr.length === 0 ||
-              !arr.find((o) => o.question_id === question.question_id)
-            ) {
-              const obj = {
-                question_id: question.question_id,
-                question_title: question.title,
-                peso: question.peso,
-                options: query
-                  .filter((q) => q.question_id === question.question_id)
-                  .map(
-                    ({
-                      option_id,
-                      option_title,
-                      question_id,
-                      option_letter,
-                    }) => ({
-                      option_question_id: question_id,
-                      option_id,
-                      option_title,
-                      option_letter,
-                    })
-                  ),
-              };
-              arr.push(obj);
-            }
-          });
-          return arr;
-        });
+      const questions = await findQuestions(prova.prova_id);
 
       res.status(200).json({
         prova_id: prova.prova_id,
@@ -111,6 +73,37 @@ class QuestionControllers {
       res.status(500).json({
         msg: {
           error: 'Ocorreu um erro ao obter questões da prova',
+        },
+      });
+    }
+  }
+
+  async getQuestionsFeedback(req, res) {
+    try {
+      const { uuidProva } = req.params;
+
+      const prova = await findProvaByUuid(uuidProva);
+
+      if (!prova) {
+        return res.status(404).json({
+          msg: {
+            error: 'Não foram encontradas provas com o identificador informado',
+          },
+        });
+      }
+
+      const questions = await findQuestions(prova.prova_id, true);
+
+      res.status(200).json({
+        prova_id: prova.prova_id,
+        prova_title: prova.title,
+        questions,
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        errors: {
+          msg: 'Ocorreu um erro ao obter feedback de questões',
         },
       });
     }

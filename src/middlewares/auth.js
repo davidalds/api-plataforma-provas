@@ -6,7 +6,7 @@ const auth = (req, res, next) => {
   if (!token) {
     return res.status(400).json({
       error: {
-        msg: 'Token não informado',
+        msg: 'Token de acesso não informado',
       },
     });
   }

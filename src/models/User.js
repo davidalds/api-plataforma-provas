@@ -10,7 +10,7 @@ class User {
 
       return newUser;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
   async findUserByEmail(userEmail) {
@@ -21,7 +21,7 @@ class User {
       }
       return null;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
   async findUserByUuid(uuidUser) {
@@ -34,7 +34,7 @@ class User {
 
       return user;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 
@@ -71,7 +71,7 @@ class User {
 
       return { users, total_users };
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 }

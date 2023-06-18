@@ -15,7 +15,7 @@ class Prova {
       }
       return provas;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 
@@ -29,7 +29,7 @@ class Prova {
 
       return prova;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   };
 
@@ -46,7 +46,7 @@ class Prova {
           .into('prova_users');
       });
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 
@@ -60,7 +60,7 @@ class Prova {
 
       return score;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   };
 
@@ -73,7 +73,7 @@ class Prova {
 
       return questions;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   };
 
@@ -104,7 +104,7 @@ class Prova {
         await trx.insert(insertOptions).into('option');
       });
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 
@@ -118,7 +118,7 @@ class Prova {
 
       return provasUser;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 
@@ -126,7 +126,7 @@ class Prova {
     try {
       await knex.insert(users_arr).into('prova_users');
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 
@@ -134,7 +134,7 @@ class Prova {
     try {
       await knex.del().where({ prova_id, user_id }).from('prova_users');
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 
@@ -150,7 +150,7 @@ class Prova {
 
       return users;
     } catch (error) {
-      console.log(error);
+      throw error;
     }
   }
 }
