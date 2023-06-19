@@ -1,4 +1,3 @@
-const knex = require('../db/connection');
 const { saveScore, findScore, findProvaByUuid } = require('../models/Prova');
 const {
   findQuestionWithOptions,
