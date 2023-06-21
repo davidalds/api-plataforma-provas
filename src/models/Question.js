@@ -17,6 +17,7 @@ class Question {
     try {
       const questionAndOptions = await knex
         .select(
+          'question.question_id',
           'question.peso',
           'option.option_letter',
           'option.option_id',
@@ -106,6 +107,27 @@ class Question {
         });
 
       return questions;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async saveQuestionsAnswers(questions_answered) {
+    try {
+      await knex.insert(questions_answered).into('questions_answers');
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async findQuestionAnswer(user_id, question_id) {
+    try {
+      const question_answer = knex
+        .select()
+        .from('questions_answers')
+        .where({ user_id, question_id })
+        .then((value) => value.shift());
+      return question_answer;
     } catch (error) {
       throw error;
     }
