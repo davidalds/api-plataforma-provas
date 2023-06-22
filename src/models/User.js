@@ -38,7 +38,7 @@ class User {
     }
   }
 
-  async findAllUsersCandidato(prova_id, offset, limit) {
+  async findAllUsersCandidato(prova_id, offset, limit, search) {
     try {
       const prova = await knex
         .select('prova_users.user_id')
@@ -54,6 +54,7 @@ class User {
           this.select(knex.raw('count(*) as users'))
             .from('users')
             .where({ user_type: 2 })
+            .andWhereLike('email', search ? search : '%')
             .groupBy('user_id')
             .havingNotIn('user_id', users_id)
             .as('users_table');
@@ -64,6 +65,7 @@ class User {
         .select('username', 'email', 'uuid')
         .from('users')
         .where({ user_type: 2 })
+        .andWhereLike('email', search ? search : '%')
         .groupBy('user_id')
         .havingNotIn('user_id', users_id) // Filtra para usuarios que já não estejam vinculados a prova
         .offset(offset ? offset : 0)

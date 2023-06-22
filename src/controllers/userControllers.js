@@ -77,7 +77,7 @@ class UserController {
     try {
       const { uuidProva } = req.params;
 
-      const { offset, limit } = req.query;
+      const { offset, limit, search } = req.query;
 
       const prova = await findProvaByUuid(uuidProva);
 
@@ -89,7 +89,12 @@ class UserController {
         });
       }
 
-      const users = await findAllUsersCandidato(prova.prova_id, offset, limit);
+      const users = await findAllUsersCandidato(
+        prova.prova_id,
+        offset,
+        limit,
+        search
+      );
 
       const resData = {
         users: users.users,
