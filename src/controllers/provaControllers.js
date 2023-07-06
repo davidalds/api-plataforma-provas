@@ -14,8 +14,7 @@ const {
   findQuestionsWithPeso,
 } = require('../models/Question');
 const { v4: uuidv4 } = require('uuid');
-const { validationResult } = require('express-validator');
-const { findUserByUuid } = require('../models/User');
+const { findUserByUuid, findUserById } = require('../models/User');
 
 class ProvaControllers {
   async getProvas(req, res) {
@@ -58,14 +57,30 @@ class ProvaControllers {
         });
       }
 
+      const userObj = {
+        username: '',
+        email: '',
+      };
+
+      const user = await findUserById(prova.creator);
+
+      if (user) {
+        userObj.username = user.username;
+        userObj.email = user.email;
+      }
+
       res.status(200).json({
         prova: {
           ...prova,
           total_score: question.total_score,
           total_question: parseInt(question.total_question),
+          creator: {
+            ...userObj,
+          },
         },
       });
     } catch (error) {
+      console.log(error);
       res.status(500).json({
         msg: {
           error: 'Ocorreu um erro ao obter informações da prova',

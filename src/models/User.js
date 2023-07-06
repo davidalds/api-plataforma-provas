@@ -13,6 +13,24 @@ class User {
       throw error;
     }
   }
+
+  async findUserById(user_id) {
+    try {
+      const user = await knex
+        .select('username', 'email')
+        .from('users')
+        .where({ user_id });
+
+      if (user) {
+        return user[0];
+      }
+
+      return null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async findUserByEmail(userEmail) {
     try {
       const user = await knex.select().from('users').where('email', userEmail);

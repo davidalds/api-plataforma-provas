@@ -22,7 +22,14 @@ class Prova {
   findProvaByUuid = async (uuid) => {
     try {
       const prova = await knex
-        .select('prova_id', 'title', 'description', 'initial_date', 'end_date')
+        .select(
+          'prova_id',
+          'title',
+          'description',
+          'initial_date',
+          'end_date',
+          'creator'
+        )
         .from('prova')
         .where({ uuid })
         .then((value) => value.shift());
