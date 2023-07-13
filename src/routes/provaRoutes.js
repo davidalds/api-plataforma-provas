@@ -6,7 +6,12 @@ const user = require('../middlewares/user');
 const creator = require('../middlewares/creator');
 
 router.get('/provas/:uuidUser', auth, user, provaControllers.getProvas);
-router.get('/prova/:uuidProva', auth, provaControllers.getProva);
+router.get(
+  '/prova/:uuidUser/:uuidProva',
+  auth,
+  user,
+  provaControllers.getProva
+);
 router.get(
   '/prova/score/:uuid/:uuidUser',
   auth,

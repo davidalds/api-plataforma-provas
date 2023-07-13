@@ -6,7 +6,12 @@ const user = require('../middlewares/user');
 const questionAnswersSchema = require('../middlewares/schemas/questionAnswersSchema');
 const creator = require('../middlewares/creator');
 
-router.get('/questions/:uuidProva', auth, questionControllers.getQuestions);
+router.get(
+  '/questions/:uuidUser/:uuidProva',
+  auth,
+  user,
+  questionControllers.getQuestions
+);
 
 router.put(
   '/questions/:uuidUser/:uuidProva',

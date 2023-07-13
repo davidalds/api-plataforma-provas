@@ -36,7 +36,7 @@ class ProvaControllers {
 
   async getProva(req, res) {
     try {
-      const { uuidProva } = req.params;
+      const { user_id, uuidProva } = req.params;
 
       const prova = await findProvaByUuid(uuidProva);
 
@@ -44,6 +44,16 @@ class ProvaControllers {
         return res.status(404).json({
           errors: {
             msg: 'Não foram encontradas provas com o identificador informado',
+          },
+        });
+      }
+
+      const isUserLinkedToProva = await findProvasUser(prova.prova_id, user_id);
+
+      if (!isUserLinkedToProva) {
+        return res.status(401).json({
+          errors: {
+            msg: 'Você não possui permissão para ver informações da prova',
           },
         });
       }

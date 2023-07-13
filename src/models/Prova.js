@@ -123,7 +123,11 @@ class Prova {
         .where({ prova_id, user_id })
         .then((value) => value.shift());
 
-      return provasUser;
+      if (provasUser) {
+        return provasUser;
+      }
+
+      return null;
     } catch (error) {
       throw error;
     }
