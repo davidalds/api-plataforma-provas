@@ -74,7 +74,7 @@ class QuestionControllers {
 
   async getQuestions(req, res) {
     try {
-      const { user_id, uuidProva } = req.params;
+      const { user_id, user_type, uuidProva } = req.params;
       const { isFeedback } = req.query;
 
       const prova = await findProvaByUuid(uuidProva);
@@ -87,14 +87,19 @@ class QuestionControllers {
         });
       }
 
-      const isUserLinkedToProva = await findProvasUser(prova.prova_id, user_id);
+      if (user_type === 2) {
+        const isUserLinkedToProva = await findProvasUser(
+          prova.prova_id,
+          user_id
+        );
 
-      if (!isUserLinkedToProva) {
-        return res.status(401).json({
-          errors: {
-            msg: 'Você não possui permissão para ver questionário da prova',
-          },
-        });
+        if (!isUserLinkedToProva) {
+          return res.status(401).json({
+            errors: {
+              msg: 'Você não possui permissão para ver questionário da prova',
+            },
+          });
+        }
       }
 
       const questions = await findQuestions(
