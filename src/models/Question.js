@@ -13,6 +13,22 @@ class Question {
     }
   }
 
+  async findQuestionById(question_id) {
+    try {
+      const question = await knex
+        .select()
+        .from('question')
+        .where({ question_id });
+
+      if (question.length) {
+        return question[0];
+      }
+      return null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async findQuestionWithOptions(provaId) {
     try {
       const questionAndOptions = await knex
@@ -128,6 +144,67 @@ class Question {
         .where({ user_id, question_id })
         .then((value) => value.shift());
       return question_answer;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async putQuestion(prova_id, { question_id, title, peso, options }) {
+    try {
+      await knex.transaction(async (trx) => {
+        const q = await trx
+          .update({ title, peso }, ['question_id'])
+          .into('question')
+          .where({ prova_id, question_id });
+
+        await Promise.all(
+          options.map(
+            async ({ option_id, option_title, iscorrect }) =>
+              await trx
+                .update({ option_id, title: option_title, iscorrect })
+                .into('option')
+                .where({ option_id, question_id: q[0].question_id })
+          )
+        );
+
+        return;
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async postQuestion(prova_id, { title, peso, options }) {
+    try {
+      await knex.transaction(async (trx) => {
+        const q = await trx
+          .insert({ title, prova_id, peso }, ['question_id'])
+          .into('question');
+
+        await Promise.all(
+          options.map(
+            async ({ option_letter, option_title, iscorrect }) =>
+              await trx
+                .insert({
+                  option_letter,
+                  title: option_title,
+                  iscorrect,
+                  question_id: q[0].question_id,
+                })
+                .into('option')
+          )
+        );
+
+        return;
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async deleteQuestion(question_id) {
+    try {
+      await knex.del().from('question').where({ question_id });
     } catch (error) {
       throw error;
     }

@@ -42,6 +42,19 @@ class User {
       throw error;
     }
   }
+
+  async findUserByUsername(username) {
+    try {
+      const user = await knex.select().from('users').where({ username });
+      if (user) {
+        return user[0];
+      }
+      return null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async findUserByUuid(uuidUser) {
     try {
       const user = await knex

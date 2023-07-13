@@ -13,6 +13,15 @@ router.get(
   user,
   provaControllers.getScore
 );
+
+router.put(
+  '/prova/:uuidUser/:uuidProva',
+  auth,
+  user,
+  creator,
+  provaControllers.updateProva
+);
+
 router.post(
   '/provas/:uuidUser',
   auth,

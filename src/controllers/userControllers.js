@@ -2,16 +2,45 @@ const {
   create,
   findUserByEmail,
   findAllUsersCandidato,
+  findUserByUsername,
 } = require('../models/User');
 const { genSaltSync, hashSync, compareSync } = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { findProvaByUuid } = require('../models/Prova');
+const { validationResult } = require('express-validator');
 
 class UserController {
   async createUser(req, res) {
     try {
+      const errors = validationResult(req);
+
+      if (!errors.isEmpty()) {
+        return res.status(404).json({ errors: errors.array() });
+      }
+
       const { username, password, email, user_type } = req.body;
+
+      const hasUserWithUsername = await findUserByUsername(username);
+
+      if (hasUserWithUsername) {
+        return res.status(403).json({
+          errors: {
+            msg: 'Já existe um usuário cadastrado com esse nome de usuário',
+          },
+        });
+      }
+
+      const hasUserWithEmail = await findUserByEmail(email);
+
+      if (hasUserWithEmail) {
+        return res.status(403).json({
+          errors: {
+            msg: 'Já existe um usuário cadastrado com esse e-mail',
+          },
+        });
+      }
+
       const salt = genSaltSync(10);
       const hash = hashSync(password, salt);
       const uuid = uuidv4();

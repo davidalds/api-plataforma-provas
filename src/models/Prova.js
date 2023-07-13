@@ -145,6 +145,15 @@ class Prova {
     }
   }
 
+  async putProva(prova_id, prova_data) {
+    try {
+      await knex.update(prova_data).into('prova').where({ prova_id });
+      return;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async findUsersByProva(prova_id) {
     try {
       const users = await knex

@@ -8,6 +8,7 @@ const {
   findProvasUser,
   findUsersByProva,
   deleteProvaUsers,
+  putProva,
 } = require('../models/Prova');
 const {
   findQuestionWithOptions,
@@ -308,6 +309,42 @@ class ProvaControllers {
       res.status(500).json({
         msg: {
           error: 'Ocorreu um erro ao listar candidatos da prova',
+        },
+      });
+    }
+  }
+
+  async updateProva(req, res) {
+    try {
+      const { uuidProva } = req.params;
+
+      const { title, description, initial_date, end_date } = req.body;
+
+      const prova = await findProvaByUuid(uuidProva);
+
+      if (!prova) {
+        return res.status(404).json({
+          errors: {
+            msg: 'Não foram encontradas provas com o identificador informado',
+          },
+        });
+      }
+
+      await putProva(prova.prova_id, {
+        title,
+        description,
+        initial_date,
+        end_date,
+      });
+
+      res.status(200).json({
+        msg: 'Informações da prova editadas com sucesso',
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        msg: {
+          error: 'Ocorreu um erro ao editar informações da prova',
         },
       });
     }

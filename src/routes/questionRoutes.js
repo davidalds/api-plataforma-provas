@@ -4,8 +4,17 @@ const questionControllers = require('../controllers/questionControllers');
 const auth = require('../middlewares/auth');
 const user = require('../middlewares/user');
 const questionAnswersSchema = require('../middlewares/schemas/questionAnswersSchema');
+const creator = require('../middlewares/creator');
 
 router.get('/questions/:uuidProva', auth, questionControllers.getQuestions);
+
+router.put(
+  '/questions/:uuidUser/:uuidProva',
+  auth,
+  user,
+  creator,
+  questionControllers.updateQuestion
+);
 
 router.get(
   '/questions/feedback/:uuidProva/:uuidUser',
@@ -20,6 +29,14 @@ router.post(
   user,
   questionAnswersSchema,
   questionControllers.questionAnswersVerify
+);
+
+router.delete(
+  '/question/:uuidUser/:questionId',
+  auth,
+  user,
+  creator,
+  questionControllers.removeQuestion
 );
 
 module.exports = router;

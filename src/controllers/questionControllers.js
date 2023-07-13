@@ -1,3 +1,4 @@
+const knex = require('../db/connection');
 const {
   saveScore,
   findProvaByUuid,
@@ -8,6 +9,10 @@ const {
   findQuestions,
   saveQuestionsAnswers,
   findQuestionAnswer,
+  putQuestion,
+  postQuestion,
+  deleteQuestion,
+  findQuestionById,
 } = require('../models/Question');
 
 const { validationResult } = require('express-validator');
@@ -70,6 +75,7 @@ class QuestionControllers {
   async getQuestions(req, res) {
     try {
       const { uuidProva } = req.params;
+      const { isFeedback } = req.query;
 
       const prova = await findProvaByUuid(uuidProva);
 
@@ -81,7 +87,10 @@ class QuestionControllers {
         });
       }
 
-      const questions = await findQuestions(prova.prova_id);
+      const questions = await findQuestions(
+        prova.prova_id,
+        isFeedback ? isFeedback : false
+      );
 
       res.status(200).json({
         prova_id: prova.prova_id,
@@ -141,6 +150,85 @@ class QuestionControllers {
       res.status(500).json({
         errors: {
           msg: 'Ocorreu um erro ao obter feedback de questões',
+        },
+      });
+    }
+  }
+
+  async updateQuestion(req, res) {
+    try {
+      const { questions } = req.body;
+
+      const { uuidProva } = req.params;
+
+      const prova = await findProvaByUuid(uuidProva);
+
+      if (!prova) {
+        return res.status(404).json({
+          msg: {
+            error: 'Não foram encontradas provas com o identificador informado',
+          },
+        });
+      }
+
+      await Promise.all(
+        questions.map(
+          async ({ question_id, question_title, peso, options }) => {
+            if (question_id !== undefined) {
+              return await putQuestion(prova.prova_id, {
+                question_id,
+                title: question_title,
+                peso,
+                options,
+              });
+            }
+
+            return await postQuestion(prova.prova_id, {
+              title: question_title,
+              peso,
+              options,
+            });
+          }
+        )
+      );
+
+      res.status(200).json({
+        msg: 'Questões atualizadas com sucesso',
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        errors: {
+          msg: 'Ocorreu um erro ao editar questões',
+        },
+      });
+    }
+  }
+
+  async removeQuestion(req, res) {
+    try {
+      const { questionId } = req.params;
+
+      const question = await findQuestionById(questionId);
+
+      if (!question) {
+        return res.statu(404).json({
+          errors: {
+            msg: 'Não foram encontradas questões com o identificador informado',
+          },
+        });
+      }
+
+      await deleteQuestion(question.question_id);
+
+      res.status(200).json({
+        msg: 'Questão deletada com sucesso',
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        errors: {
+          msg: 'Ocorreu um erro ao deletar questão',
         },
       });
     }
