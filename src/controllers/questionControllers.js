@@ -3,6 +3,8 @@ const {
   saveScore,
   findProvaByUuid,
   findProvasUser,
+  findScore,
+  findProvaById,
 } = require('../models/Prova');
 const {
   findQuestionWithOptions,
@@ -29,6 +31,24 @@ class QuestionControllers {
       const { user_id } = req.params;
       const { options, prova_id } = req.body;
 
+      const prova = await findProvaById(prova_id);
+
+      if (!prova) {
+        return res.status(404).json({
+          errors: {
+            msg: 'Prova não encontrada',
+          },
+        });
+      }
+
+      if (prova.result) {
+        return res.status(403).json({
+          errors: {
+            msg: 'Não é possível responder a prova, pois o resultado já foi liberado',
+          },
+        });
+      }
+
       let correct_questions = 0;
       const answersPoints = options.length
         ? await findQuestionWithOptions(prova_id).then((query) => {
@@ -49,9 +69,9 @@ class QuestionControllers {
         option_id: op.option_id,
       }));
 
-      const hasProvaDone = await findProvasUser(prova_id, user_id);
+      const hasScore = await findScore(prova_id, user_id);
 
-      if (hasProvaDone.done) {
+      if (hasScore) {
         return res.status(403).json({
           error: {
             msg: 'O usuário já respondeu à prova',
@@ -61,12 +81,12 @@ class QuestionControllers {
 
       await saveScore(answersPoints, prova_id, user_id, correct_questions);
       await saveQuestionsAnswers(questions_answered);
-      res.status(200).json({ msg: `Pontuação na prova salva com sucesso` });
+      res.status(201).json({ msg: `Pontuação na prova salva com sucesso` });
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao verificar respostas da prova',
+        errors: {
+          msg: 'Ocorreu um erro ao verificar respostas da prova',
         },
       });
     }
@@ -81,13 +101,38 @@ class QuestionControllers {
 
       if (!prova) {
         return res.status(404).json({
-          msg: {
-            error: 'Não foram encontradas provas com o identificador informado',
+          errors: {
+            msg: 'Não foram encontradas provas com o identificador informado',
           },
         });
       }
 
       if (user_type === 2) {
+        const isProvaDone = await findProvasUser(prova.prova_id, user_id);
+
+        if (!compareIfProvaDateIsBigger(prova.end_date, prova.timer)) {
+          return res.status(403).json({
+            errors: {
+              msg: 'A data de aplicação da prova expirou',
+            },
+          });
+        }
+
+        if (prova.result) {
+          return res.status(403).json({
+            errors: {
+              msg: 'O resultado da prova já foi liberado',
+            },
+          });
+        }
+
+        if (isProvaDone && isProvaDone.done) {
+          return res.status(403).json({
+            errors: {
+              msg: 'O usuário já acessou a prova',
+            },
+          });
+        }
         const isUserLinkedToProva = await findProvasUser(
           prova.prova_id,
           user_id
@@ -96,7 +141,7 @@ class QuestionControllers {
         if (!isUserLinkedToProva) {
           return res.status(401).json({
             errors: {
-              msg: 'Você não possui permissão para ver questionário da prova',
+              msg: 'Você não possui permissão para ver o questionário da prova',
             },
           });
         }
@@ -110,13 +155,14 @@ class QuestionControllers {
       res.status(200).json({
         prova_id: prova.prova_id,
         prova_title: prova.title,
+        timer: prova.timer,
         questions,
       });
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao obter questões da prova',
+        errors: {
+          msg: 'Ocorreu um erro ao obter questões da prova',
         },
       });
     }
@@ -131,8 +177,8 @@ class QuestionControllers {
 
       if (!prova) {
         return res.status(404).json({
-          msg: {
-            error: 'Não foram encontradas provas com o identificador informado',
+          errors: {
+            msg: 'Não foram encontradas provas com o identificador informado',
           },
         });
       }
@@ -149,7 +195,9 @@ class QuestionControllers {
 
               return {
                 ...q,
-                option_answered_id: option_answered.option_id,
+                option_answered_id: option_answered
+                  ? option_answered.option_id
+                  : 0,
               };
             })
           )
@@ -172,6 +220,12 @@ class QuestionControllers {
 
   async updateQuestion(req, res) {
     try {
+      const errors = validationResult(req);
+
+      if (!errors.isEmpty()) {
+        return res.status(400).json(errors.array());
+      }
+
       const { questions } = req.body;
 
       const { uuidProva } = req.params;
@@ -180,8 +234,16 @@ class QuestionControllers {
 
       if (!prova) {
         return res.status(404).json({
-          msg: {
-            error: 'Não foram encontradas provas com o identificador informado',
+          errors: {
+            msg: 'Não foram encontradas provas com o identificador informado',
+          },
+        });
+      }
+
+      if (prova.result) {
+        return res.status(403).json({
+          errors: {
+            msg: 'Não é possível alterar questões após a liberação do resultado da prova',
           },
         });
       }
@@ -207,7 +269,7 @@ class QuestionControllers {
         )
       );
 
-      res.status(200).json({
+      res.status(201).json({
         msg: 'Questões atualizadas com sucesso',
       });
     } catch (error) {
@@ -230,6 +292,16 @@ class QuestionControllers {
         return res.statu(404).json({
           errors: {
             msg: 'Não foram encontradas questões com o identificador informado',
+          },
+        });
+      }
+
+      const prova = await findProvaById(question.prova_id);
+
+      if (prova.result) {
+        return res.status(403).json({
+          errors: {
+            msg: 'Não é possível excluir questões após o resultado da prova ser liberado',
           },
         });
       }

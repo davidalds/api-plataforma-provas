@@ -9,6 +9,8 @@ const {
   findUsersByProva,
   deleteProvaUsers,
   putProva,
+  updatePublishedStatus,
+  updateProvaDone,
 } = require('../models/Prova');
 const {
   findQuestionWithOptions,
@@ -16,19 +18,48 @@ const {
 } = require('../models/Question');
 const { v4: uuidv4 } = require('uuid');
 const { findUserByUuid, findUserById } = require('../models/User');
+const compareIfProvaDateIsBigger = require('../utils/compareDates');
+const { validationResult } = require('express-validator');
 
 class ProvaControllers {
   async getProvas(req, res) {
     try {
       const { user_id, user_type } = req.params;
       const done_status = req.query.done || false;
-      const provas = await findProvas(user_id, done_status, user_type);
+      const isPublished = req.query.published || false;
+
+      const resProvas = await findProvas(
+        user_id,
+        done_status,
+        user_type,
+        isPublished
+      );
+
+      let provas = resProvas;
+
+      if (user_type === 2) {
+        if (done_status === false) {
+          //Local suas provas: somente mostra provas que estão em data de aplicação
+          provas = provas.filter(
+            ({ end_date, timer }) =>
+              compareIfProvaDateIsBigger(end_date, timer) === true
+          );
+        } else {
+          // Local provas finalizadas: se o usuário tiver feito a prova ou a data final da prova já ter passado
+          provas = provas.filter(
+            ({ done, end_date, timer }) =>
+              done === true ||
+              compareIfProvaDateIsBigger(end_date, timer) === false
+          );
+        }
+      }
+
       res.status(200).json({ provas });
     } catch (err) {
       console.log(err);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao obter provas',
+        errors: {
+          msg: 'Ocorreu um erro ao obter provas',
         },
       });
     }
@@ -36,17 +67,7 @@ class ProvaControllers {
 
   async getProva(req, res) {
     try {
-      const { user_id, user_type, uuidProva } = req.params;
-
-      const prova = await findProvaByUuid(uuidProva);
-
-      if (!prova) {
-        return res.status(404).json({
-          errors: {
-            msg: 'Não foram encontradas provas com o identificador informado',
-          },
-        });
-      }
+      const { user_id, user_type, prova } = req.params;
 
       if (user_type === 2) {
         const isUserLinkedToProva = await findProvasUser(
@@ -58,6 +79,14 @@ class ProvaControllers {
           return res.status(401).json({
             errors: {
               msg: 'Você não possui permissão para ver informações da prova',
+            },
+          });
+        }
+
+        if (!compareIfProvaDateIsBigger(prova.end_date, prova.timer)) {
+          return res.status(403).json({
+            errors: {
+              msg: 'A data de aplicação da prova expirou',
             },
           });
         }
@@ -85,21 +114,27 @@ class ProvaControllers {
         userObj.email = user.email;
       }
 
-      res.status(200).json({
-        prova: {
-          ...prova,
-          total_score: question.total_score,
-          total_question: parseInt(question.total_question),
-          creator: {
-            ...userObj,
-          },
+      let provaRes = {
+        ...prova,
+        total_score: question.total_score,
+        total_question: parseInt(question.total_question),
+        creator: {
+          ...userObj,
         },
+      };
+
+      if (!compareIfProvaDateIsBigger(prova.end_date, prova.timer)) {
+        provaRes['releaseResult'] = true;
+      }
+
+      res.status(200).json({
+        prova: { ...provaRes },
       });
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao obter informações da prova',
+        errors: {
+          msg: 'Ocorreu um erro ao obter informações da prova',
         },
       });
     }
@@ -107,14 +142,12 @@ class ProvaControllers {
 
   async getScore(req, res) {
     try {
-      const { user_id, uuid } = req.params;
+      const { user_id, prova } = req.params;
 
-      const prova = await findProvaByUuid(uuid);
-
-      if (!prova) {
-        return res.status(404).json({
+      if (!prova.result) {
+        return res.status(403).json({
           errors: {
-            msg: 'Não foram encontradas provas com o identificador informado',
+            msg: 'O resultado da prova ainda não foi liberado',
           },
         });
       }
@@ -148,8 +181,43 @@ class ProvaControllers {
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao obter dados da prova',
+        errors: {
+          msg: 'Ocorreu um erro ao obter dados da prova',
+        },
+      });
+    }
+  }
+
+  async releaseProvaResult(req, res) {
+    try {
+      const { prova, user_id } = req.params;
+
+      if (prova.creator !== user_id) {
+        return res.status(401).json({
+          errors: {
+            msg: 'Você não possui permissão para liberar o resultado',
+          },
+        });
+      }
+
+      if (compareIfProvaDateIsBigger(prova.end_date, prova.timer)) {
+        return res.status(403).json({
+          errors: {
+            msg: 'O resultado da prova não pode ser liberado pois ela ainda está na data de aplicação',
+          },
+        });
+      }
+
+      await putProva(prova.prova_id, { result: true });
+
+      res.status(200).json({
+        msg: 'O resultado da prova foi liberado com sucesso',
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        errors: {
+          msg: 'Ocorreu um erro ao liberar resultado da prova',
         },
       });
     }
@@ -158,8 +226,18 @@ class ProvaControllers {
   newProva = async (req, res) => {
     try {
       const { user_id } = req.params;
-      const { title, description, initial_date, end_date, questions } =
+      const { title, description, timer, initial_date, end_date, questions } =
         req.body;
+
+      const errors = validationResult(req);
+
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          errors: {
+            msg: errors.array(),
+          },
+        });
+      }
 
       const uuid = uuidv4();
 
@@ -171,16 +249,17 @@ class ProvaControllers {
           end_date,
           uuid,
           creator: user_id,
+          timer,
         },
         questions
       );
 
-      res.status(200).json({ msg: 'Prova cadastrada com sucesso!' });
+      res.status(201).json({ msg: 'Prova cadastrada com sucesso!' });
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao criar prova',
+        errors: {
+          msg: 'Ocorreu um erro ao criar prova',
         },
       });
     }
@@ -200,6 +279,14 @@ class ProvaControllers {
         return res.status(404).json({
           errors: {
             msg: 'Não foram encontradas provas para serem vinculadas a usuários',
+          },
+        });
+      }
+
+      if (prova.result) {
+        return res.status(403).json({
+          errors: {
+            msg: 'Não é possível vincular candidatos a uma prova em que o resultado já foi liberado',
           },
         });
       }
@@ -243,13 +330,13 @@ class ProvaControllers {
       await createProvaUsers(users_to_be_included);
 
       res
-        .status(200)
+        .status(201)
         .json({ msg: 'Usuário(s) vinculado(s) a prova com sucesso' });
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao vincular usuários a prova',
+        errors: {
+          msg: 'Ocorreu um erro ao vincular usuários a prova',
         },
       });
     }
@@ -257,19 +344,8 @@ class ProvaControllers {
 
   async deslinkProvaUser(req, res) {
     try {
-      const { uuidProva, uuidDeslinkUser } = req.params;
-
-      const prova = await findProvaByUuid(uuidProva);
-
+      const { prova, uuidDeslinkUser } = req.params;
       const user = await findUserByUuid(uuidDeslinkUser);
-
-      if (!prova) {
-        return res.status(404).json({
-          errors: {
-            msg: 'Não foram encontradas provas para serem desvinculadas',
-          },
-        });
-      }
 
       if (!user) {
         return res.status(404).json({
@@ -287,8 +363,8 @@ class ProvaControllers {
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao desvincular usuário da prova',
+        errors: {
+          msg: 'Ocorreu um erro ao desvincular usuário da prova',
         },
       });
     }
@@ -296,34 +372,16 @@ class ProvaControllers {
 
   async getUsersByProva(req, res) {
     try {
-      const { uuid } = req.params;
-
-      const prova = await findProvaByUuid(uuid);
-
-      if (!prova) {
-        return res.status(404).json({
-          errors: {
-            msg: 'Não foram encontradas provas com o identificador informado',
-          },
-        });
-      }
+      const { prova } = req.params;
 
       const users = await findUsersByProva(prova.prova_id);
 
-      if (!users) {
-        return res.status(404).json({
-          errors: {
-            msg: 'Não foram encontrados candidatos vinculados a prova',
-          },
-        });
-      }
-
-      res.status(200).json({ users });
+      res.status(200).json({ users, totalLinkedUsers: users.length });
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao listar candidatos da prova',
+        errors: {
+          msg: 'Ocorreu um erro ao listar candidatos da prova',
         },
       });
     }
@@ -331,16 +389,20 @@ class ProvaControllers {
 
   async updateProva(req, res) {
     try {
-      const { uuidProva } = req.params;
+      const { prova } = req.params;
 
-      const { title, description, initial_date, end_date } = req.body;
+      const errors = validationResult(req);
 
-      const prova = await findProvaByUuid(uuidProva);
+      if (!errors.isEmpty()) {
+        return res.status(400).json(errors.array());
+      }
 
-      if (!prova) {
-        return res.status(404).json({
+      const { title, description, timer, initial_date, end_date } = req.body;
+
+      if (prova.result) {
+        return res.status(403).json({
           errors: {
-            msg: 'Não foram encontradas provas com o identificador informado',
+            msg: 'Não é possível editar a prova após o resultado ser liberado',
           },
         });
       }
@@ -350,6 +412,7 @@ class ProvaControllers {
         description,
         initial_date,
         end_date,
+        timer,
       });
 
       res.status(200).json({
@@ -358,8 +421,65 @@ class ProvaControllers {
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        msg: {
-          error: 'Ocorreu um erro ao editar informações da prova',
+        errors: {
+          msg: 'Ocorreu um erro ao editar informações da prova',
+        },
+      });
+    }
+  }
+
+  async publishProva(req, res) {
+    try {
+      const { prova } = req.params;
+
+      await updatePublishedStatus(prova.prova_id, true);
+
+      res.status(200).json({
+        msg: 'Prova publicada com sucesso',
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        errors: {
+          msg: 'Ocorreu um erro ao publicar prova',
+        },
+      });
+    }
+  }
+
+  async unpublishProva(req, res) {
+    try {
+      const { prova } = req.params;
+
+      await updatePublishedStatus(prova.prova_id, false);
+
+      res.status(200).json({
+        msg: 'Prova publicada com sucesso',
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        errors: {
+          errors: 'Ocorreu um erro ao despublicar prova',
+        },
+      });
+    }
+  }
+
+  async markProvaDone(req, res) {
+    try {
+      const { user_id, prova } = req.params;
+
+      await updateProvaDone(prova.prova_id, user_id);
+
+      res.status(200).json({
+        msg: 'Confirmação da realização da prova com sucesso',
+      });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({
+        errors: {
+          msg: 'Ocorreu um erro ao confirmar realização da prova',
         },
       });
     }

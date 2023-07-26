@@ -1,16 +1,32 @@
 const knex = require('../db/connection');
 
 class Prova {
-  async findProvas(user_id, filter_done, user_type) {
+  async findProvas(user_id, filter_done, user_type, published) {
     try {
       let provas;
       if (user_type === 1) {
-        provas = await knex.select().from('prova').where({ creator: user_id });
+        provas = await knex
+          .select()
+          .from('prova')
+          .where({ creator: user_id, published });
       } else if (user_type === 2) {
         provas = await knex
           .select()
           .from('prova_users')
-          .where({ user_id: user_id, done: filter_done })
+          .modify((queryBuilder) => {
+            if (!filter_done) {
+              queryBuilder.where({
+                user_id,
+                published: true,
+                result: false,
+              });
+            } else {
+              queryBuilder.where({
+                user_id,
+                published: true,
+              });
+            }
+          })
           .join('prova', 'prova.prova_id', 'prova_users.prova_id');
       }
       return provas;
@@ -18,6 +34,15 @@ class Prova {
       throw error;
     }
   }
+
+  findProvaById = async (prova_id) => {
+    try {
+      const prova = await knex.select().from('prova').where({ prova_id });
+      return prova[0];
+    } catch (error) {
+      throw error;
+    }
+  };
 
   findProvaByUuid = async (uuid) => {
     try {
@@ -28,7 +53,10 @@ class Prova {
           'description',
           'initial_date',
           'end_date',
-          'creator'
+          'creator',
+          'published',
+          'timer',
+          'result'
         )
         .from('prova')
         .where({ uuid })
@@ -52,6 +80,17 @@ class Prova {
           .where({ prova_id: prova_id, user_id: user_id })
           .into('prova_users');
       });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateProvaDone(prova_id, user_id) {
+    try {
+      await knex
+        .update({ done: true })
+        .where({ prova_id, user_id })
+        .into('prova_users');
     } catch (error) {
       throw error;
     }
@@ -148,7 +187,6 @@ class Prova {
   async putProva(prova_id, prova_data) {
     try {
       await knex.update(prova_data).into('prova').where({ prova_id });
-      return;
     } catch (error) {
       throw error;
     }
@@ -157,7 +195,12 @@ class Prova {
   async findUsersByProva(prova_id) {
     try {
       const users = await knex
-        .select('users.username', 'users.email', 'users.uuid')
+        .select(
+          'users.username',
+          'users.email',
+          'users.uuid',
+          'prova_users.done'
+        )
         .from('prova_users')
         .where({
           prova_id,
@@ -165,6 +208,14 @@ class Prova {
         .join('users', 'prova_users.user_id', 'users.user_id');
 
       return users;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updatePublishedStatus(prova_id, published) {
+    try {
+      await knex.update({ published }).into('prova').where({ prova_id });
     } catch (error) {
       throw error;
     }

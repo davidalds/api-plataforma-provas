@@ -16,7 +16,7 @@ class UserController {
       const errors = validationResult(req);
 
       if (!errors.isEmpty()) {
-        return res.status(404).json({ errors: errors.array() });
+        return res.status(400).json(errors.array());
       }
 
       const { username, password, email, user_type } = req.body;
@@ -52,7 +52,7 @@ class UserController {
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        error: {
+        errors: {
           msg: 'Ocorreu um erro ao criar usuário',
         },
       });
@@ -67,7 +67,7 @@ class UserController {
 
       if (!user) {
         return res.status(401).json({
-          error: {
+          errors: {
             msg: 'Credenciais inválidas',
           },
         });
@@ -75,7 +75,7 @@ class UserController {
 
       if (!compareSync(password, user.password)) {
         return res.status(401).json({
-          error: {
+          errors: {
             msg: 'Credenciais inválidas',
           },
         });
@@ -95,7 +95,7 @@ class UserController {
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        error: {
+        errors: {
           msg: 'Ocorreu um erro ao realizar login',
         },
       });
@@ -134,7 +134,7 @@ class UserController {
     } catch (error) {
       console.log(error);
       res.status(500).json({
-        error: {
+        errors: {
           msg: 'Ocorreu um erro ao listar participantes',
         },
       });

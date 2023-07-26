@@ -1,44 +1,40 @@
 const { checkSchema } = require('express-validator');
 
 module.exports = checkSchema({
-  username: {
-    trim: true,
-    notEmpty: {
-      errorMessage: 'Campo obrigatório',
-    },
-    isLength: {
-      options: {
-        min: 3,
-        max: 20,
-      },
-      errorMessage: 'Tamanho mínimo deve ser 3 e máximo 20',
-    },
-  },
-  email: {
-    trim: true,
-    notEmpty: {
-      errorMessage: 'Campo obrigatório',
-    },
-    isEmail: {
-      errorMessage: 'E-mail deve ser válido',
-    },
-  },
-  password: {
+  title: {
     trim: true,
     notEmpty: {
       errorMessage: 'Campo obrigatório',
     },
   },
-  user_type: {
+  description: {
+    trim: true,
     notEmpty: {
       errorMessage: 'Campo obrigatório',
     },
-    isFloat: {
-      options: {
-        max: 2,
-        min: 1,
-      },
-      errorMessage: 'Valor deve ser entre 1 e 2',
+  },
+  initial_date: {
+    notEmpty: {
+      errorMessage: 'Campo obrigatório',
+    },
+    isISO8601: {
+      errorMessage: 'Campo deve ser em formato de data',
+    },
+  },
+  end_date: {
+    notEmpty: {
+      errorMessage: 'Campo obrigatório',
+    },
+    isISO8601: {
+      errorMessage: 'Campo deve ser em formato de data',
+    },
+  },
+  timer: {
+    notEmpty: {
+      errorMessage: 'Campo obrigatório',
+    },
+    isNumeric: {
+      errorMessage: 'Campo deve ser númerico',
     },
   },
 });

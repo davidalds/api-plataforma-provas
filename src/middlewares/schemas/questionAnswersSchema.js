@@ -1,10 +1,24 @@
-const { check } = require('express-validator');
+const { checkSchema } = require('express-validator');
 
-module.exports = [
-  check('prova_id').notEmpty().withMessage('Campo obrigatório'),
-  check('options')
-    .isArray({ min: 1 })
-    .withMessage('Valor deve ser um array com um item ou mais')
-    .notEmpty()
-    .withMessage('Campo obrigatório'),
-];
+module.exports = checkSchema({
+  prova_id: {
+    notEmpty: {
+      errorMessage: 'Campo obrigatório',
+    },
+    isNumeric: {
+      errorMessage: 'Campo deve ser númerico',
+    },
+  },
+  options: {
+    notEmpty: {
+      errorMessage: 'Campo obrigatório',
+    },
+    isArray: {
+      errorMessage: 'Campo deve ser um array',
+    },
+    isLength: {
+      min: 1,
+      errorMessage: 'Tamanho mínimo do array deve ser 1',
+    },
+  },
+});
