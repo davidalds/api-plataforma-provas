@@ -1,13 +1,13 @@
 const { checkSchema } = require('express-validator');
 
 module.exports = checkSchema({
-  question_title: {
+  'questions.*.question_title': {
     trim: true,
     notEmpty: {
       errorMessage: 'Campo obrigatório',
     },
   },
-  peso: {
+  'questions.*.peso': {
     notEmpty: {
       errorMessage: 'Campo obrigatório',
     },
@@ -22,13 +22,13 @@ module.exports = checkSchema({
       errorMessage: 'Valor deve ser entre 1 e 10',
     },
   },
-  'options.*.title': {
+  'questions.*.options.*.option_title': {
     trim: true,
     notEmpty: {
       errorMessage: 'Campo obrigatório',
     },
   },
-  'options.*.iscorrect': {
+  'questions.*.options.*.iscorrect': {
     notEmpty: {
       errorMessage: 'Campo obrigatório',
     },
@@ -36,7 +36,7 @@ module.exports = checkSchema({
       errorMessage: 'Campo deve ser booleano',
     },
   },
-  'options.*.option_letter': {
+  'questions.*.options.*.option_letter': {
     notEmpty: {
       errorMessage: 'Campo obrigatório',
     },
